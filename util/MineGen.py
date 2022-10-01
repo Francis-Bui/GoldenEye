@@ -12,30 +12,30 @@ n = 256
 map_seed = 0
 
 def voronoi(points, size):
-    # Add points at edges to eliminate infinite ridges
+    # add points at edges to eliminate infinite ridges
     edge_points = size*np.array([[-1, -1], [-1, 2], [2, -1], [2, 2]])
     new_points = np.vstack([points, edge_points])
     
-    # Calculate Voronoi tessellation
+    # calculate Voronoi tessellation
     vor = Voronoi(new_points)
     
     return vor
 
 def voronoi_map(vor, size):
-    # Calculate Voronoi map
+    # calculate Voronoi map
     vor_map = np.zeros((size, size), dtype=np.uint32)
 
     for i, region in enumerate(vor.regions):
-        # Skip empty regions and infinte ridge regions
+        # skip empty regions and infinte ridge regions
         if len(region) == 0 or -1 in region: continue
-        # Get polygon vertices    
+        # get polygon vertices    
         x, y = np.array([vor.vertices[i][::-1] for i in region]).T
-        # Get pixels inside polygon
+        # get pixels inside polygon
         rr, cc = polygon(x, y)
-        # Remove pixels out of image bounds
+        # remove pixels out of image bounds
         in_box = np.where((0 <= rr) & (rr < size) & (0 <= cc) & (cc < size))
         rr, cc = rr[in_box], cc[in_box]
-        # Paint image
+        # paint image
         vor_map[rr, cc] = i
 
     return vor_map

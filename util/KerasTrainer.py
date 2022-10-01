@@ -1,5 +1,6 @@
 import numpy as np
 import random
+import pickle
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Flatten
 from keras.optimizers import Adam, RMSprop
@@ -12,7 +13,7 @@ class DQN_Solver:
     def __init__(self, state_size, action_size):
         self.state_size = state_size # list size of state
         self.action_size = action_size # list size of action
-        self.memory = deque(maxlen=75000) # memory space
+        self.memory = deque(maxlen=100000) # memory space
         self.gamma = 0.9 # discount rate
         self.epsilon = 1.0 # randomness of choosing random action or the best one
         self.e_decay = 0.9999 # epsilon decay rate
@@ -35,6 +36,7 @@ class DQN_Solver:
     # remember state, action, its reward, next state and next possible action. done means boolean for goal
     def remember_memory(self, state, action, reward, next_state, next_movables, done):
         self.memory.append((state, action, reward, next_state, next_movables, done))
+        pickle.dump(self.memory, open('model/tempmem.pkl', 'wb'))
 
     # choosing action depending on epsilon
     def choose_action(self, state, movables):
@@ -61,6 +63,7 @@ class DQN_Solver:
 
     # this experience replay is going to train the model from memorized states, actions and rewards
     def replay_experience(self, batch_size):
+        self.memory = pickle.load(open('model/tempmem.pkl', 'rb'))
         batch_size = min(batch_size, len(self.memory))
         minibatch = random.sample(self.memory, batch_size)
         X = []
@@ -86,6 +89,7 @@ class DQN_Solver:
             self.epsilon *= self.e_decay
 
     def saveModel(self):
+        
         model_json = self.model.to_json()
         with open("model/model.json", "w") as json_file:
             json_file.write(model_json)
@@ -129,7 +133,7 @@ class Field(object):
             else: 
                 return v, False
 
-mine_field = Field(mine, start_point=[1,1], goal_point=[995,995])
+mine_field = Field(mine, start_point=[0,0], goal_point=[1023,1023])
 
 state_size = 2
 action_size = 2
@@ -142,8 +146,7 @@ episodes = 20000
 times = 1000
 
 for e in range(episodes):
-    print (e)
-    state = [1,1]
+    state = [0,0]
     score = 0
     for time in range(times):
         movables = mine_field.get_actions(state)
