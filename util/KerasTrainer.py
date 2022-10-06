@@ -1,19 +1,19 @@
 import numpy as np
 import random
-import pickle
+import tensorflow as tf
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Flatten
-from keras.optimizers import Adam, RMSprop
+from tensorflow.keras.optimizers import Adam, RMSprop
 from collections import deque
 from keras import backend as K
 
-mine = np.loadtxt('datasets/Mine.txt', delimiter=' ')
+mine = np.loadtxt('datasets/Mine.txt')
 
 class DQN_Solver:
     def __init__(self, state_size, action_size):
         self.state_size = state_size # list size of state
         self.action_size = action_size # list size of action
-        self.memory = deque(maxlen=100000) # memory space
+        self.memory = deque(maxlen=1000000) # memory space
         self.gamma = 0.9 # discount rate
         self.epsilon = 1.0 # randomness of choosing random action or the best one
         self.e_decay = 0.9999 # epsilon decay rate
@@ -25,10 +25,10 @@ class DQN_Solver:
     # model for neural network
     def build_model(self):
         model = Sequential()
-        model.add(Dense(128, input_shape=(2,2), activation='leaky_relu'))
+        model.add(Dense(128, input_shape=(2,2), activation='relu'))
         model.add(Flatten())
-        model.add(Dense(128, activation='leaky_relu'))
-        model.add(Dense(128, activation='leaky_relu'))
+        model.add(Dense(128, activation='relu'))
+        model.add(Dense(128, activation='relu'))
         model.add(Dense(1, activation='linear'))
         model.compile(loss="mse", optimizer=RMSprop(learning_rate=self.learning_rate))
         return model
@@ -36,7 +36,7 @@ class DQN_Solver:
     # remember state, action, its reward, next state and next possible action. done means boolean for goal
     def remember_memory(self, state, action, reward, next_state, next_movables, done):
         self.memory.append((state, action, reward, next_state, next_movables, done))
-        pickle.dump(self.memory, open('model/tempmem.pkl', 'wb'))
+
 
     # choosing action depending on epsilon
     def choose_action(self, state, movables):
@@ -63,7 +63,6 @@ class DQN_Solver:
 
     # this experience replay is going to train the model from memorized states, actions and rewards
     def replay_experience(self, batch_size):
-        self.memory = pickle.load(open('model/tempmem.pkl', 'rb'))
         batch_size = min(batch_size, len(self.memory))
         minibatch = random.sample(self.memory, batch_size)
         X = []
@@ -140,7 +139,7 @@ action_size = 2
 dql_solver = DQN_Solver(state_size, action_size)
 
 # number of episodes to run training
-episodes = 20000
+episodes = 6000
 
 # number of times to sample the combination of state, action and reward
 times = 1000
@@ -152,7 +151,7 @@ for e in range(episodes):
         movables = mine_field.get_actions(state)
         action = dql_solver.choose_action(state, movables)
         reward, done = mine_field.get_val(action)
-        score = score + reward - 10
+        score = score + reward - 30
         next_state = action
         next_movables = mine_field.get_actions(next_state)
         dql_solver.remember_memory(state, action, reward, next_state, next_movables, done)
@@ -163,4 +162,5 @@ for e in range(episodes):
         state = next_state
     # run experience replay after sampling the state, action and reward for defined times
     dql_solver.replay_experience(32)
+    K.clear_session()
 dql_solver.saveModel()
