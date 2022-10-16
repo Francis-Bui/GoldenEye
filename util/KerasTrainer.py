@@ -1,6 +1,7 @@
 import numpy as np
 import random
 import tensorflow as tf
+import copy
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Flatten
 from tensorflow.keras.optimizers import Adam, RMSprop
@@ -113,8 +114,7 @@ class Field(object):
                 y = state[0] + v[0]
                 x = state[1] + v[1]
                 if not(0 < x < len(self.mine) and
-                       0 <= y <= len(self.mine) - 1 and
-                       mine[y][x] != -1):
+                       0 <= y <= len(self.mine) - 1):
                     continue
                 movables.append([y,x])
             if len(movables) != 0:
@@ -127,13 +127,13 @@ class Field(object):
         if state == self.start_point: return 0, False
         else:
             v = float(self.mine[y][x])
-            self.mine[y][x] = -1
+            self.mine[y][x] = 0
             if state == self.goal_point: 
                 return v, True
             else: 
                 return v, False
-        
 
+mine_field = Field(mine, start_point=[0,0], goal_point=[1023,1023])
 state_size = 2
 action_size = 2
 dql_solver = DQN_Solver(state_size, action_size)
@@ -142,12 +142,12 @@ dql_solver = DQN_Solver(state_size, action_size)
 episodes = 6000
 
 # number of times to sample the combination of state, action and reward
-times = 1000
+times = 2000000
 
 for e in range(episodes):
-    mine_field = Field(mine, start_point=[0,0], goal_point=[1023,1023])
     state = [0,0]
     score = 0
+    mine_field = Field(mine, start_point=[0,0], goal_point=[1023,1023])
     for time in range(times):
         movables = mine_field.get_actions(state)
         action = dql_solver.choose_action(state, movables)
