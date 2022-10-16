@@ -143,13 +143,12 @@ class Field(object):
             else: 
                 return v, False
 
-mine_field = Field(mine, start_point=[0,0], goal_point=[99,99])
 state_size = 2
 action_size = 2
 dql_solver = DQN_Solver(state_size, action_size)
 
 # number of episodes to run training
-episodes = 6000
+episodes = 30000
 
 # number of times to sample the combination of state, action and reward
 times = 10000
@@ -158,20 +157,20 @@ for e in range(episodes):
     state = [0,0]
     score = 0
     done = False
-    mine_field = Field(mine, start_point=[0,0], goal_point=[99,99])
+    mine_field = Field(mine, start_point=[random.randint(0, 49),random.randint(0, 49)], goal_point=[random.randint(0, 49),random.randint(0, 49)])
     stuck = False
     for time in range(times):
         movables, stuck = mine_field.get_actions(state)
         if stuck == False:
             action = dql_solver.choose_action(state, movables)
             reward, done = mine_field.get_val(action)
-            score = score + reward - 30
+            score = score + reward - 60
             next_state = action
             next_movables, stuck = mine_field.get_actions(next_state)
         dql_solver.remember_memory(state, action, reward, next_state, next_movables, done, stuck)
         if done or time == (times - 1) or stuck == True:
-            print("episode: {}/{}, score: {}, e: {:.2} \t @ {}"
-                    .format(e, episodes, score, dql_solver.epsilon, time))
+            print("episode: {}/{}, score: {}, e: {:.2} \t @ {}, done: {}"
+                    .format(e, episodes, score, dql_solver.epsilon, time, done))
             break
         state = next_state
     # run experience replay after sampling the state, action and reward for defined times

@@ -6,7 +6,7 @@ from skimage.draw import polygon
 from PIL import Image
 from noise import snoise3
 
-size = 100
+size = 50
 n = 256
 map_seed = 0
 
@@ -77,7 +77,7 @@ def noise_map(size, res, seed, octaves=1, persistence=0.5, lacunarity=2.0):
     ])
 
 boundary_displacement = 8
-boundary_noise = np.dstack([noise_map(size, 32, 200, octaves=8), noise_map(size, 32, 250, octaves=8)])
+boundary_noise = np.dstack([noise_map(size, 2, 200, octaves=16), noise_map(size, 2, 250, octaves=16)])
 boundary_noise = np.indices((size, size)).T + boundary_displacement*boundary_noise
 boundary_noise = boundary_noise.clip(0, size-1).astype(np.uint32)
 

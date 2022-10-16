@@ -85,7 +85,7 @@ class Field(object):
             else: 
                 return v, False
 
-mine_field = Field(mine, start_point=[0,0], goal_point=[99,99])
+mine_field = Field(mine, start_point=[0,0], goal_point=[49,49])
 
 state_size = 2
 action_size = 2
