@@ -35,8 +35,8 @@ class DQN_Solver:
         return model
 
     # remember state, action, its reward, next state and next possible action. done means boolean for goal
-    def remember_memory(self, state, action, reward, next_state, next_movables, done):
-        self.memory.append((state, action, reward, next_state, next_movables, done))
+    def remember_memory(self, state, action, reward, next_state, next_movables, done, stuck):
+        self.memory.append((state, action, reward, next_state, next_movables, done, stuck))
 
 
     # choosing action depending on epsilon
@@ -68,20 +68,28 @@ class DQN_Solver:
         minibatch = random.sample(self.memory, batch_size)
         X = []
         Y = []
+        
         for i in range(batch_size):
-            state, action, reward, next_state, next_movables, done = minibatch[i]
+            state, action, reward, next_state, next_movables, done, stuck = minibatch[i]
             input_action = [state, action]
-            if done:
-                target_f = reward
-            else:
-                next_rewards = []
-                for i in next_movables:
-                    np_next_s_a = np.array([[next_state, i]])
-                    next_rewards.append(self.model.predict(np_next_s_a, verbose=0))
-                np_n_r_max = np.amax(np.array(next_rewards))
-                target_f = reward + self.gamma * np_n_r_max
-            X.append(input_action)
-            Y.append(target_f)
+
+            if stuck == False:
+                if done:
+                    target_f = reward
+                else:
+                    next_rewards = []
+                    for i in next_movables:
+                        np_next_s_a = np.array([[next_state, i]])
+                        next_rewards.append(self.model.predict(np_next_s_a, verbose=0))
+                    np_n_r_max = np.amax(np.array(next_rewards))
+                    target_f = reward + self.gamma * np_n_r_max
+                X.append(input_action)
+                Y.append(target_f)
+        
+            if stuck == True:
+                X.append(input_action)
+                Y.append(-10)
+
         np_X = np.array(X)
         np_Y = np.array([Y]).T
         self.model.fit(np_X, np_Y, epochs=1, verbose=0)
@@ -98,6 +106,7 @@ class DQN_Solver:
 class Field(object):
     def __init__(self, mine, start_point, goal_point):
         self.mine = mine
+        self.oldmine = copy.deepcopy(self.mine)
         self.start_point = start_point
         self.goal_point = goal_point
         self.movable_vec = [[1,0],[-1,0],[0,1],[0,-1]]
@@ -108,32 +117,33 @@ class Field(object):
             y = state[0] + 1
             x = state[1]
             a = [[y, x]]
-            return a
+            return a, False
         else:
             for v in self.movable_vec:
                 y = state[0] + v[0]
                 x = state[1] + v[1]
                 if not(0 < x < len(self.mine) and
-                       0 <= y <= len(self.mine) - 1):
+                       0 <= y <= len(self.mine) - 1 and 
+                       self.oldmine[y][x] != 0):
                     continue
                 movables.append([y,x])
             if len(movables) != 0:
-                return movables
+                return movables, False
             else:
-                return None
+                return None, True
 
     def get_val(self, state):
         y, x = state
         if state == self.start_point: return 0, False
         else:
             v = float(self.mine[y][x])
-            self.mine[y][x] = 0
+            self.oldmine[y][x] = 0
             if state == self.goal_point: 
                 return v, True
             else: 
                 return v, False
 
-mine_field = Field(mine, start_point=[0,0], goal_point=[1023,1023])
+mine_field = Field(mine, start_point=[0,0], goal_point=[99,99])
 state_size = 2
 action_size = 2
 dql_solver = DQN_Solver(state_size, action_size)
@@ -142,21 +152,24 @@ dql_solver = DQN_Solver(state_size, action_size)
 episodes = 6000
 
 # number of times to sample the combination of state, action and reward
-times = 2000000
+times = 10000
 
 for e in range(episodes):
     state = [0,0]
     score = 0
-    mine_field = Field(mine, start_point=[0,0], goal_point=[1023,1023])
+    done = False
+    mine_field = Field(mine, start_point=[0,0], goal_point=[99,99])
+    stuck = False
     for time in range(times):
-        movables = mine_field.get_actions(state)
-        action = dql_solver.choose_action(state, movables)
-        reward, done = mine_field.get_val(action)
-        score = score + reward - 30
-        next_state = action
-        next_movables = mine_field.get_actions(next_state)
-        dql_solver.remember_memory(state, action, reward, next_state, next_movables, done)
-        if done or time == (times - 1):
+        movables, stuck = mine_field.get_actions(state)
+        if stuck == False:
+            action = dql_solver.choose_action(state, movables)
+            reward, done = mine_field.get_val(action)
+            score = score + reward - 30
+            next_state = action
+            next_movables, stuck = mine_field.get_actions(next_state)
+        dql_solver.remember_memory(state, action, reward, next_state, next_movables, done, stuck)
+        if done or time == (times - 1) or stuck == True:
             print("episode: {}/{}, score: {}, e: {:.2} \t @ {}"
                     .format(e, episodes, score, dql_solver.epsilon, time))
             break

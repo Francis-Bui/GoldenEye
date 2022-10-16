@@ -42,7 +42,7 @@ class Field(object):
         self.start_point = start_point
         self.goal_point = goal_point
         self.movable_vec = [[1,0],[-1,0],[0,1],[0,-1]]
-        self.field_data = copy.deepcopy(self.mine)
+        self.oldmine = copy.deepcopy(self.mine)
 
     def get_actions(self, state):
         movables = []
@@ -50,25 +50,25 @@ class Field(object):
             y = state[0] + 1
             x = state[1]
             a = [[y, x]]
-            return a
+            return a, False
         else:
             for v in self.movable_vec:
                 y = state[0] + v[0]
                 x = state[1] + v[1]
                 if not(0 < x < len(self.mine) and
-                       0 <= y <= len(self.mine) - 1):
+                       0 <= y <= len(self.mine) - 1 and 
+                       self.oldmine[y][x] != 0):
                     continue
                 movables.append([y,x])
             if len(movables) != 0:
-                return movables
+                return movables, False
             else:
-                return None
+                return None, True
     
     def display(self, point=None):
         
         if not point is None:
                 y, x = point
-                self.field_data[y][x] = -1000
         else:
                 point = ""
         #for line in self.field_data:
@@ -78,13 +78,14 @@ class Field(object):
         y, x = state
         if state == self.start_point: return 0, False
         else:
-            v = float(self.field_data[y][x])
+            v = float(self.mine[y][x])
+            self.oldmine[y][x] = 0
             if state == self.goal_point: 
                 return v, True
             else: 
                 return v, False
 
-mine_field = Field(mine, start_point=[0,0], goal_point=[1023,1023])
+mine_field = Field(mine, start_point=[0,0], goal_point=[99,99])
 
 state_size = 2
 action_size = 2
@@ -95,7 +96,7 @@ score = 0
 steps = 0
 while True:
     steps += 1
-    movables = mine_field.get_actions(state)
+    movables, stuck = mine_field.get_actions(state)
     action = dql_solver.choose_best_action(state, movables)
     print("current state: {0} -> action: {1} ".format(state, action))
     reward, done = mine_field.get_val(action)
@@ -108,6 +109,8 @@ while True:
         print("goal!")
         break
 
+plt.plot(mine_field.oldmine)
 fig, ax = plt.subplots()
 ax.set_title("AI Path")
-ax.imshow(mine_field.field_data, cmap="cividis")
+ax.imshow(mine_field.oldmine, cmap="cividis")
+plt.show()
