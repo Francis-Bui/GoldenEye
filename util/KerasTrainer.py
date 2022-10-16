@@ -88,7 +88,6 @@ class DQN_Solver:
             self.epsilon *= self.e_decay
 
     def saveModel(self):
-        
         model_json = self.model.to_json()
         with open("model/model.json", "w") as json_file:
             json_file.write(model_json)
@@ -127,10 +126,12 @@ class Field(object):
         if state == self.start_point: return 0, False
         else:
             v = float(self.mine[y][x])
+            self.mine[y][x] = -200
             if state == self.goal_point: 
                 return v, True
             else: 
                 return v, False
+        
 
 mine_field = Field(mine, start_point=[0,0], goal_point=[1023,1023])
 

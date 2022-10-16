@@ -1,6 +1,5 @@
 import random
 import numpy as np
-import numpy as np
 from matplotlib import pyplot as plt
 from scipy.spatial import Voronoi
 from skimage.draw import polygon
