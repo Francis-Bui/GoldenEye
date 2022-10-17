@@ -123,7 +123,7 @@ class Field(object):
                 y = state[0] + v[0]
                 x = state[1] + v[1]
                 if not(0 < x < len(self.mine) and
-                       0 <= y <= len(self.mine) - 1 and 
+                       0 < y < len(self.mine) and 
                        self.oldmine[y][x] != 0):
                     continue
                 movables.append([y,x])
@@ -157,7 +157,7 @@ for e in range(episodes):
     state = [0,0]
     score = 0
     done = False
-    mine_field = Field(mine, start_point=[random.randint(0, 49),random.randint(0, 49)], goal_point=[random.randint(0, 49),random.randint(0, 49)])
+    mine_field = Field(mine, start_point=[random.randint(1, 48),random.randint(1, 48)], goal_point=[random.randint(1, 48),random.randint(1, 48)])
     stuck = False
     for time in range(times):
         movables, stuck = mine_field.get_actions(state)
