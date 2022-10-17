@@ -1,10 +1,10 @@
 # GoldenEye
 <h1 align="center">
-🥇 A ML Deep-Q Network That Digs For Gold 👁️ </h1>
+ML Deep-Q Network That Digs For Gold </h1>
 <hr/>
 
 <p>
-The AI is given a randomly generated gold mine, which is a 2d array with integer values ranging from 0 - 270, organized into pockets of minerals using a combination of perlin and voronoi noise. <sub>(I based this off of minecraft)</sub>
+I made this project to learn more about RNNs. The AI is given a randomly generated gold mine, which is a 2d array with integer values ranging from 0 - 270, organized into pockets of minerals using a combination of perlin and voronoi noise. <sub>(I based this off of minecraft)</sub>
 </p>
 
 <h2 align="center">
