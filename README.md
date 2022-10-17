@@ -8,12 +8,11 @@ The AI is given a randomly generated gold mine, which is a 2d array with integer
 </p>
 
 <h2 align="center">
-Three Mines
+Mine Examples
 </h2>
 
 <p align="center">
 <img src="https://user-images.githubusercontent.com/47166254/196258588-666f25c4-7ac3-469a-93cd-079989b135b7.png" width="320" />
-<img src="https://user-images.githubusercontent.com/47166254/196259853-ffd7b083-526c-46e4-920b-568cb818aeed.png" width="320" />
 <img src="https://user-images.githubusercontent.com/47166254/196259997-c5986c33-5258-434b-aefc-7e42086265e8.png" width="320" />
 </p>
 
