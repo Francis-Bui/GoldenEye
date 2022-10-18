@@ -27,7 +27,7 @@ class DQN_Solver:
     # model for neural network
     def build_model(self):
         model = Sequential()
-        model.add(Dense(128, input_shape=(3,2), activation='relu'))
+        model.add(Dense(128, input_shape=(7,2), activation='relu'))
         model.add(Flatten())
         model.add(Dense(128, activation='relu'))
         model.add(Dense(128, activation='relu'))
@@ -36,25 +36,25 @@ class DQN_Solver:
         return model
 
     # remember state, action, its reward, next state and next possible action. done means boolean for goal
-    def remember_memory(self, state, action, reward, next_state, next_movables, done, stuck, goal_point):
-        self.memory.append((state, action, reward, next_state, next_movables, done, stuck, goal_point))
+    def remember_memory(self, state, action, reward, next_state, next_movables, done, stuck, goal_point, dangers):
+        self.memory.append((state, action, reward, next_state, next_movables, done, stuck, goal_point, dangers))
 
 
     # choosing action depending on epsilon
-    def choose_action(self, state, movables):
+    def choose_action(self, state, movables, goal_point, dangers):
         if self.epsilon >= random.random():
             # randomly choosing action
             return random.choice(movables)
         else:
             # choosing the best action from model.predict()
-            return self.choose_best_action(state, movables)
+            return self.choose_best_action(state, movables, goal_point, dangers)
         
     # choose the best action to maximize reward expectation
-    def choose_best_action(self, state, movables):
+    def choose_best_action(self, state, movables, goal_point, dangers):
         best_actions = []
         max_act_value = -100
         for a in movables:
-            np_action = np.array([[state, a, mine_field.goal_point]])
+            np_action = np.array([[state, a, goal_point, dangers[0], dangers[1], dangers[2], dangers[3]]])
             act_value = self.model.predict(np_action, verbose=0)
             if act_value > max_act_value:
                 best_actions = [a,]
@@ -71,8 +71,8 @@ class DQN_Solver:
         Y = []
         
         for i in range(batch_size):
-            state, action, reward, next_state, next_movables, done, stuck, goal_point = minibatch[i]
-            input_action = [state, action, goal_point]
+            state, action, reward, next_state, next_movables, done, stuck, goal_point, dangers = minibatch[i]
+            input_action = [state, action, goal_point, dangers[0], dangers[1], dangers[2], dangers[3]]
 
             if stuck == False:
                 if done:
@@ -80,7 +80,7 @@ class DQN_Solver:
                 else:
                     next_rewards = []
                     for i in next_movables:
-                        np_next_s_a = np.array([[next_state, i, goal_point]])
+                        np_next_s_a = np.array([[next_state, i, goal_point, dangers[0], dangers[1], dangers[2], dangers[3]]])
                         next_rewards.append(self.model.predict(np_next_s_a, verbose=0))
                     np_n_r_max = np.amax(np.array(next_rewards))
                     target_f = reward + self.gamma * np_n_r_max
@@ -116,11 +116,12 @@ class Field(object):
 
     def get_actions(self, state):
         movables = []
+        dangers = []
         if state == self.start_point:
             y = state[0] + 1
             x = state[1]
             a = [[y, x]]
-            return a, False
+            return a, False, [[0,0], [0,0], [0,0], [0,0]]
         else:
             for v in self.movable_vec:
                 y = state[0] + v[0]
@@ -128,12 +129,14 @@ class Field(object):
                 if not(0 <= x <= len(self.mine) - 1 and
                        0 <= y <= len(self.mine) - 1 and 
                        self.oldmine[y][x] != 0):
+                    dangers.append([y,x])
                     continue
                 movables.append([y,x])
+                dangers.append([0,0])
             if len(movables) != 0:
-                return movables, False
+                return movables, False, dangers
             else:
-                return None, True
+                return None, True, dangers
 
     def get_val(self, state):
         y, x = state
@@ -173,14 +176,14 @@ for e in range(episodes):
     mine_field = Field(mine, randpoints[0], randpoints[1])
     state = mine_field.start_point
     for time in range(times):
-        movables, stuck = mine_field.get_actions(state)
+        movables, stuck, dangers = mine_field.get_actions(state)
         if stuck == False:
-            action = dql_solver.choose_action(state, movables)
+            action = dql_solver.choose_action(state, movables, randpoints[1], dangers)
             reward, done = mine_field.get_val(action)
             score = score + reward
             next_state = action
-            next_movables, stuck = mine_field.get_actions(next_state)
-        dql_solver.remember_memory(state, action, reward, next_state, next_movables, done, stuck, randpoints[1])
+            next_movables, stuck, dangers = mine_field.get_actions(next_state)
+        dql_solver.remember_memory(state, action, reward, next_state, next_movables, done, stuck, randpoints[1], dangers)
         if done or time == (times - 1) or stuck == True:
             print("episode: {}/{}, score: {}, e: {:.2} \t @ {}, done: {}"
                     .format(e, episodes, score, dql_solver.epsilon, time, done))
