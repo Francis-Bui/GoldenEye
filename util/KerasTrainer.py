@@ -93,7 +93,6 @@ class DQN_Solver:
 
         np_X = np.array(X)
         np_Y = np.array([Y]).T
-        print (np_X)
         self.model.fit(np_X, np_Y, epochs=1, verbose=0)
         if self.epsilon > self.e_min:
             self.epsilon *= self.e_decay
