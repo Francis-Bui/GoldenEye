@@ -1,17 +1,18 @@
 import numpy as np
 import random
-import tensorflow as tf
 import copy
 from keras.models import Sequential
-from keras.layers import Dense, Activation, Flatten
-from tensorflow.keras.optimizers import Adam, RMSprop
-from collections import deque
+from keras.layers import Dense, Flatten
+from keras.optimizers import Adam, RMSprop
 from keras import backend as K
+from collections import deque
+
 
 mine = np.loadtxt('datasets/Mine.txt')
 
 class DQN_Solver:
     def __init__(self, state_size, action_size):
+        self.stuckpunish = 10000
         self.state_size = state_size # list size of state
         self.action_size = action_size # list size of action
         self.memory = deque(maxlen=1000000) # memory space
@@ -26,7 +27,7 @@ class DQN_Solver:
     # model for neural network
     def build_model(self):
         model = Sequential()
-        model.add(Dense(128, input_shape=(2,2), activation='relu'))
+        model.add(Dense(128, input_shape=(3,2), activation='relu'))
         model.add(Flatten())
         model.add(Dense(128, activation='relu'))
         model.add(Dense(128, activation='relu'))
@@ -35,8 +36,8 @@ class DQN_Solver:
         return model
 
     # remember state, action, its reward, next state and next possible action. done means boolean for goal
-    def remember_memory(self, state, action, reward, next_state, next_movables, done, stuck):
-        self.memory.append((state, action, reward, next_state, next_movables, done, stuck))
+    def remember_memory(self, state, action, reward, next_state, next_movables, done, stuck, goal_point):
+        self.memory.append((state, action, reward, next_state, next_movables, done, stuck, goal_point))
 
 
     # choosing action depending on epsilon
@@ -53,7 +54,7 @@ class DQN_Solver:
         best_actions = []
         max_act_value = -100
         for a in movables:
-            np_action = np.array([[state, a]])
+            np_action = np.array([[state, a, mine_field.goal_point]])
             act_value = self.model.predict(np_action, verbose=0)
             if act_value > max_act_value:
                 best_actions = [a,]
@@ -70,8 +71,8 @@ class DQN_Solver:
         Y = []
         
         for i in range(batch_size):
-            state, action, reward, next_state, next_movables, done, stuck = minibatch[i]
-            input_action = [state, action]
+            state, action, reward, next_state, next_movables, done, stuck, goal_point = minibatch[i]
+            input_action = [state, action, goal_point]
 
             if stuck == False:
                 if done:
@@ -79,7 +80,7 @@ class DQN_Solver:
                 else:
                     next_rewards = []
                     for i in next_movables:
-                        np_next_s_a = np.array([[next_state, i]])
+                        np_next_s_a = np.array([[next_state, i, goal_point]])
                         next_rewards.append(self.model.predict(np_next_s_a, verbose=0))
                     np_n_r_max = np.amax(np.array(next_rewards))
                     target_f = reward + self.gamma * np_n_r_max
@@ -88,10 +89,11 @@ class DQN_Solver:
         
             if stuck == True:
                 X.append(input_action)
-                Y.append(-10)
+                Y.append(self.stuckpunish)
 
         np_X = np.array(X)
         np_Y = np.array([Y]).T
+        print (np_X)
         self.model.fit(np_X, np_Y, epochs=1, verbose=0)
         if self.epsilon > self.e_min:
             self.epsilon *= self.e_decay
@@ -107,6 +109,8 @@ class Field(object):
     def __init__(self, mine, start_point, goal_point):
         self.mine = mine
         self.oldmine = copy.deepcopy(self.mine)
+        self.bonus = 20000
+        self.greed = 60
         self.start_point = start_point
         self.goal_point = goal_point
         self.movable_vec = [[1,0],[-1,0],[0,1],[0,-1]]
@@ -136,12 +140,12 @@ class Field(object):
         y, x = state
         if state == self.start_point: return 0, False
         else:
-            v = float(self.mine[y][x])
+            v = float(self.oldmine[y][x])
             self.oldmine[y][x] = 0
             if state == self.goal_point: 
-                return v, True
+                return v + self.bonus, True
             else: 
-                return v, False
+                return v - self.greed, False
 
 state_size = 2
 action_size = 2
@@ -151,23 +155,33 @@ dql_solver = DQN_Solver(state_size, action_size)
 episodes = 30000
 
 # number of times to sample the combination of state, action and reward
-times = 10000
+times = 250
+
+def get_random_points():
+    while True:
+        randstart = random.sample(range(len(mine) - 1), 2)
+        randend = random.sample(range(len(mine) - 1), 2)
+        if randstart != randend:
+            return randstart, randend
+        else:
+            continue
 
 for e in range(episodes):
-    state = [0,0]
     score = 0
     done = False
-    mine_field = Field(mine, start_point=[random.randint(1, 48),random.randint(1, 48)], goal_point=[random.randint(1, 48),random.randint(1, 48)])
     stuck = False
+    randpoints = get_random_points()
+    mine_field = Field(mine, randpoints[0], randpoints[1])
+    state = mine_field.start_point
     for time in range(times):
         movables, stuck = mine_field.get_actions(state)
         if stuck == False:
             action = dql_solver.choose_action(state, movables)
             reward, done = mine_field.get_val(action)
-            score = score + reward - 60
+            score = score + reward
             next_state = action
             next_movables, stuck = mine_field.get_actions(next_state)
-        dql_solver.remember_memory(state, action, reward, next_state, next_movables, done, stuck)
+        dql_solver.remember_memory(state, action, reward, next_state, next_movables, done, stuck, randpoints[1])
         if done or time == (times - 1) or stuck == True:
             print("episode: {}/{}, score: {}, e: {:.2} \t @ {}, done: {}"
                     .format(e, episodes, score, dql_solver.epsilon, time, done))
