@@ -116,7 +116,7 @@ class Field(object):
     def get_actions(self, state):
         movables = []
         dangers = []
-        if (state == self.start_point and self.start_point != 0):
+        if (state == self.start_point and self.oldmine[self.start_point] != 0):
             y = state[0] + 1
             x = state[1]
             a = [[y, x]]
@@ -127,7 +127,6 @@ class Field(object):
                 x = state[1] + v[1]
                 if not(0 <= x <= len(self.mine) - 1 and
                        0 <= y <= len(self.mine) - 1 and
-                       [y][x] != self.start_point and 
                        self.oldmine[y][x] != 0):
                     dangers.append([y,x])
                     continue
