@@ -61,7 +61,10 @@ class DQN_Solver:
                 max_act_value = act_value
             elif act_value == max_act_value:
                 best_actions.append(a)
-        return random.choice(best_actions)
+        if (len(best_actions) !=0):
+            return random.choice(best_actions)
+        else:
+            return random.choice(movables)
 
     # this experience replay is going to train the model from memorized states, actions and rewards
     def replay_experience(self, batch_size):
