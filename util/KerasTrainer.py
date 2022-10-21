@@ -12,7 +12,7 @@ mine = np.loadtxt('datasets/Mine.txt')
 
 class DQN_Solver:
     def __init__(self, state_size, action_size):
-        self.stuckpunish = 1000
+        self.stuckpunish = 500
         self.state_size = state_size # list size of state
         self.action_size = action_size # list size of action
         self.memory = deque(maxlen=1000000) # memory space
@@ -108,7 +108,7 @@ class Field(object):
         self.mine = mine
         self.oldmine = copy.deepcopy(self.mine)
         self.bonus = 20000
-        self.greed = 60
+        self.greed = 250
         self.start_point = start_point
         self.goal_point = goal_point
         self.movable_vec = [[1,0],[-1,0],[0,1],[0,-1]]
@@ -139,7 +139,9 @@ class Field(object):
 
     def get_val(self, state):
         y, x = state
-        if state == self.start_point: return 0, False
+        if state == self.start_point: 
+            self.oldmine[y][x] = 0
+            return 0, False
         else:
             v = float(self.oldmine[y][x])
             self.oldmine[y][x] = 0
@@ -153,10 +155,10 @@ action_size = 2
 dql_solver = DQN_Solver(state_size, action_size)
 
 # number of episodes to run training
-episodes = 30000
+episodes = 20000
 
 # number of times to sample the combination of state, action and reward
-times = 250
+times = 2500
 
 def get_random_points():
     while True:
